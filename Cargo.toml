@@ -1,0 +1,33 @@
+[package]
+name = "snake_game"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+wasm-bindgen = "0.2.94"
+wee_alloc = "0.4.5"
+
+[lib]
+crate-type = ["cdylib"]
+
+# [package.metadata.wasm-pack.profile.release]
+# wasm-opt = false   # disable wasm-opt to speed up build time
+
+# Release build size optimization settings
+[profile.release]
+opt-level = "z"      # Size optimization (can also use "s" for more aggressive)
+lto = true           # Link Time Optimization
+codegen-units = 1    # Set codegen units to 1 (maximize optimization)
+panic = "abort"      # Minimize panic handling
+strip = true         # Strip debug symbols
+
+# wasm-pack optimization settings
+# wasm-pack will automatically use wasm-opt if installed
+# To install wasm-opt: cargo install wasm-opt --locked
+# Or: sudo apt install binaryen (Ubuntu/Debian)
+# -Oz: Maximum size optimization (most aggressive, recommended for size-critical builds)
+# --enable-bulk-memory: Required for wasm-bindgen generated code (uses memory.copy, etc.)
+# -Os: Size optimization (balanced, wasm-pack default)
+# -O:  Speed optimization (default wasm-opt behavior)
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-Oz", "--enable-bulk-memory"]  # Maximum size optimization with bulk memory support   
