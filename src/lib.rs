@@ -4,15 +4,17 @@ use wee_alloc::WeeAlloc;
 #[global_allocator]
 static ALLOC: WeeAlloc = WeeAlloc::INIT;
 
+#[wasm_bindgen]
 #[derive(PartialEq)]
-enum Direction {
+pub enum Direction {
     Up,
     Down,
     Right,
     Left
 }
 
-struct SnakeCell(usize);
+#[derive(Clone, Copy)]
+pub struct SnakeCell(usize);
 
 struct Snake {
     body: Vec<SnakeCell>,
@@ -20,9 +22,15 @@ struct Snake {
 }
 
 impl Snake {
-    pub fn new(spawn_index: usize) -> Snake {
+    pub fn new(spawn_index: usize, size: usize) -> Snake {
+        let mut body = vec!();
+
+        for i in 0..size {
+            body.push(SnakeCell(spawn_index - i));
+        }
+
         Snake {
-            body: vec![SnakeCell(spawn_index)],
+            body,
             direction: Direction::Right,
         }
     }
@@ -33,6 +41,7 @@ pub struct World {
     width: usize,
     size: usize,
     snake: Snake,
+    next_cell: Option<SnakeCell>,
 }
 
 #[wasm_bindgen]
@@ -41,7 +50,8 @@ impl World {
         World {
             width,
             size: width * width,
-            snake: Snake::new(spawn_index),
+            snake: Snake::new(spawn_index, 3),
+            next_cell: Option::None,
         }
     }
 
@@ -57,36 +67,91 @@ impl World {
         self.snake.body[0].0
     }
 
-    pub fn update(&mut self) {
+    pub fn change_snake_direction(&mut self, direction: Direction){
+        let next_cell = self.generate_next_snake_cell(&direction);
+
+        // unenable to move in the opposite direction
+        if self.snake.body[1].0 == next_cell.0 {return;} 
+        self.next_cell = Option::Some(next_cell);
+        self.snake.direction = direction;
+    }
+
+    pub fn snake_length(&self) -> usize {
+        self.snake.body.len()
+    }
+
+    // we cannot return a reference to Javascript, because of borrowing rules, as follows:
+    //
+    // pub fn snake_cells(&self) -> &Vec<SnakeCell> {
+    //     self.snake.body
+    // }
+    //
+    // instead, we return a pointer to the first element of the vector
+    // *const is a raw read-only pointer that the borrowing rules don't apply to
+    // However, this pointer is not guaranteed to be valid after the next call to snake_cells(), so we need to be careful not to use it after that.
+    pub fn snake_cells(&self) -> *const SnakeCell {
+        self.snake.body.as_ptr()
+    }
+
+    pub fn step(&mut self) {
+        let temp = self.snake.body.clone();
+
+        match self.next_cell {
+            Option::Some(cell) => {
+                self.snake.body[0] = cell;
+                self.next_cell = Option::None;
+            },
+            Option::None => {
+                self.snake.body[0] = self.generate_next_snake_cell(&self.snake.direction);
+            }
+        }
+
+        for i in 1..self.snake.body.len() {
+            self.snake.body[i] = temp[i - 1];
+        }
+    }
+
+    fn generate_next_snake_cell(&self, direction: &Direction) -> SnakeCell {
         let snake_index = self.snake_head();
-        let (row, col) = self.index_to_cell(snake_index);
-        let (row, col) = match self.snake.direction {
+        let row = snake_index / self.width;
+
+        return match direction {
             Direction::Right => {
-                (row, (col + 1) % self.width)
+                // SnakeCell(row * self.width + (snake_index + 1) % self.width)
+                let threshold = (row + 1) * self.width;
+                if snake_index + 1 == threshold {
+                    SnakeCell(threshold - self.width)
+                } else {
+                    SnakeCell(snake_index + 1)
+                }
             },
             Direction::Left => {
-                (row, (col - 1) % self.width)
+                // SnakeCell(row * self.width + (snake_index - 1) % self.width)
+                let threshold = row * self.width;
+                if snake_index == threshold {
+                    SnakeCell(threshold + self.width -1)
+                } else {
+                    SnakeCell(snake_index - 1)
+                }
             },
             Direction::Up => {
-                ((row - 1) % self.width, col)
+                // SnakeCell((snake_index - self.width) % self.size)
+                let threshold = snake_index - row * self.width;
+                if snake_index == threshold {
+                    SnakeCell(self.size - self.width + threshold)
+                } else {
+                    SnakeCell(snake_index - self.width)
+                }
             },
             Direction::Down => {
-                ((row + 1) % self.width, col)
+                // SnakeCell((snake_index + self.width) % self.size)
+                let threshold = snake_index + (self.width - row) * self.width;
+                if snake_index + self.width == threshold {
+                    SnakeCell(threshold - (row + 1) * self.width)
+                } else {
+                    SnakeCell(snake_index + self.width)
+                }
             },
         };
-        let next_index = self.cell_to_index(row, col);
-        self.set_snake_head(next_index);
-    }
-
-    fn set_snake_head(&mut self, index: usize) {
-        self.snake.body[0].0 = index;
-    }
-
-    fn index_to_cell(&self, index: usize) -> (usize, usize) {
-        (index / self.width, index % self.width)
-    }
-
-    fn cell_to_index(&self, row: usize, col: usize) -> usize {
-        (row * self.width) + col
     }
 }

@@ -3,5 +3,7 @@ node_modules
 .env.local
 notes.txt
 /public/sum-v*.wasm
+/public/*.wasm
 index-v*.js
+index-v*.ts
 index-v*.html

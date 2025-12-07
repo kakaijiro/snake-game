@@ -1,3 +1,5 @@
 /target
 /src/main-v*.rs
+/src/lib-v*.rs
 notes.txt
+experiment.md
