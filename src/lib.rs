@@ -4,6 +4,11 @@ use wee_alloc::WeeAlloc;
 #[global_allocator]
 static ALLOC: WeeAlloc = WeeAlloc::INIT;
 
+#[wasm_bindgen(module = "/www/utils/rnd.ts")]
+extern {
+    fn rnd(max: usize) -> usize;
+}
+
 #[wasm_bindgen]
 #[derive(PartialEq)]
 pub enum Direction {
@@ -13,7 +18,15 @@ pub enum Direction {
     Left
 }
 
+#[wasm_bindgen]
 #[derive(Clone, Copy)]
+pub enum GameStatus {
+    Won,
+    Lost,
+    Played,
+}
+
+#[derive(PartialEq, Clone, Copy)]
 pub struct SnakeCell(usize);
 
 struct Snake {
@@ -42,21 +55,44 @@ pub struct World {
     size: usize,
     snake: Snake,
     next_cell: Option<SnakeCell>,
+    reward_cell: usize,
+    status: Option<GameStatus>
 }
 
 #[wasm_bindgen]
 impl World {
     pub fn new(width: usize, spawn_index: usize) -> World {
+
+        let snake = Snake::new(spawn_index, 3);
+        let size = width * width;
+        
+
         World {
             width,
-            size: width * width,
-            snake: Snake::new(spawn_index, 3),
+            size,
+            reward_cell: World::generate_reward_cell(size, &snake.body),
+            snake,
             next_cell: Option::None,
+            status: Option::None,
         }
     }
 
     pub fn width(&self) -> usize {
         self.width
+    }
+
+    // this function is used in the constractor, therefore it is designed like a static method.
+    fn generate_reward_cell(max: usize, snake_body: &Vec<SnakeCell>) -> usize {
+        let mut reward_cell;
+        loop {
+            reward_cell = rnd(max);
+            if !snake_body.contains(&SnakeCell(reward_cell)) {break;}
+        }
+        reward_cell
+    }
+
+    pub fn reward_cell(&self) -> usize {
+        self.reward_cell
     }
 
     pub fn size(&self) -> usize {
@@ -65,6 +101,23 @@ impl World {
 
     pub fn snake_head(&self) -> usize {
         self.snake.body[0].0
+    }
+
+    pub fn start_game(&mut self) {
+        self.status = Option::Some(GameStatus::Played);
+    }
+
+    pub fn game_status(&self) -> Option<GameStatus> {
+        self.status
+    }
+
+    pub fn game_status_text(&self) -> String {
+        match self.status {
+            Some(GameStatus::Won) => "Won".to_string(),
+            Some(GameStatus::Lost) => "Lost".to_string(),
+            Some(GameStatus::Played) => "Playing...".to_string(),
+            None => "No status".to_string(),
+        }
     }
 
     pub fn change_snake_direction(&mut self, direction: Direction){
@@ -94,20 +147,35 @@ impl World {
     }
 
     pub fn step(&mut self) {
-        let temp = self.snake.body.clone();
 
-        match self.next_cell {
-            Option::Some(cell) => {
-                self.snake.body[0] = cell;
-                self.next_cell = Option::None;
+        match self.status {
+            Some(GameStatus::Played) => {
+                let temp = self.snake.body.clone();
+                
+                match self.next_cell {
+                    Option::Some(cell) => {
+                        self.snake.body[0] = cell;
+                        self.next_cell = Option::None;
+                    },
+                    Option::None => {
+                        self.snake.body[0] = self.generate_next_snake_cell(&self.snake.direction);
+                    }
+                }
+                
+                for i in 1..self.snake.body.len() {
+                    self.snake.body[i] = temp[i - 1];
+                }
+                
+                if self.reward_cell == self.snake_head() {
+                    if self.snake_length() < self.size {
+                        self.reward_cell = World::generate_reward_cell(self.size, &self.snake.body);
+                    } else {
+                        self.reward_cell = 1000;
+                    }
+                    self.snake.body.push(self.snake.body[1]);
+                }
             },
-            Option::None => {
-                self.snake.body[0] = self.generate_next_snake_cell(&self.snake.direction);
-            }
-        }
-
-        for i in 1..self.snake.body.len() {
-            self.snake.body[i] = temp[i - 1];
+            _ => {}
         }
     }
 

@@ -16,11 +16,36 @@
         justify-content: center;
         flex-direction: column;
       }
+      .game-panel {
+        margin-bottom: 20px;
+      }
+      .flex {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        width: 100%;
+      }
+      .flex button {
+        width: 100%;
+      }
+      .label {
+        font-weight: bold;
+        margin-right: 10px;
+      }
     </style>
   </head>
   <body>
     <div class="game-container">
-      <p>Snake Game</p>
+      <div class="game-panel">
+        <div class="flex">
+          <div class="label">Status:</div>
+          <div id="game-status">None</div>
+        </div>
+        <div class="flex">
+          <button id="game-btn">Play</button>
+        </div>
+      </div>
       <canvas id="snake-canvas"></canvas>
     </div>
     <script src="./bootstrap.js"></script>
