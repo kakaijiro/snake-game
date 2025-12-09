@@ -94,7 +94,7 @@ init().then((wasm: any) => {
     snakeCells.forEach((cellIndex, index) => {
       const col = cellIndex % worldWidth;
       const row = Math.floor(cellIndex / worldWidth);
-      ctx.fillStyle = index === 0 ? "#51cf66" : "#b2f2bb";
+      ctx.fillStyle = index === 0 ? "#5f3dc4" : "#b197fc";
 
       ctx.beginPath();
       ctx.fillRect(col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE, CELL_SIZE);
