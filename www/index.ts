@@ -1,9 +1,9 @@
-import init, { World, Direction } from "snake_game";
+import init, { World, Direction, GameStatus } from "snake_game";
 import { rnd } from "./utils/rnd";
 
 init().then((wasm: any) => {
   const CELL_SIZE = 20;
-  const WORLD_WIDTH = 5;
+  const WORLD_WIDTH = 8;
 
   const snakeSpawnIndex = rnd(WORLD_WIDTH * WORLD_WIDTH);
   const world = World.new(WORLD_WIDTH, snakeSpawnIndex);
@@ -17,6 +17,7 @@ init().then((wasm: any) => {
   canvas.width = worldWidth * CELL_SIZE;
 
   const gameStatus = document.getElementById("game-status") as HTMLDivElement;
+  const gamePoints = document.getElementById("points") as HTMLDivElement;
   const gameBtn = document.getElementById("game-btn") as HTMLButtonElement;
   gameBtn.addEventListener("click", () => {
     const status = world.game_status();
@@ -91,20 +92,25 @@ init().then((wasm: any) => {
       world.snake_length()
     );
 
-    snakeCells.forEach((cellIndex, index) => {
-      const col = cellIndex % worldWidth;
-      const row = Math.floor(cellIndex / worldWidth);
-      ctx.fillStyle = index === 0 ? "#5f3dc4" : "#b197fc";
+    // .slice().reverse()
+    // ctx.fillStyle = index === snakeCells.length - 1 ? "#5f3dc4" : "#b197fc";
+    snakeCells
+      .filter((cellIndex, index) => !(index > 0 && cellIndex === snakeCells[0]))
+      .forEach((cellIndex, index) => {
+        const col = cellIndex % worldWidth;
+        const row = Math.floor(cellIndex / worldWidth);
+        ctx.fillStyle = index === 0 ? "#5f3dc4" : "#b197fc";
 
-      ctx.beginPath();
-      ctx.fillRect(col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-    });
+        ctx.beginPath();
+        ctx.fillRect(col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+      });
 
     ctx.stroke();
   }
 
   function drawGameStatus() {
     gameStatus.textContent = world.game_status_text();
+    gamePoints.textContent = world.points().toString();
   }
 
   function paint() {
@@ -115,13 +121,17 @@ init().then((wasm: any) => {
   }
 
   function play() {
+    const status = world.game_status();
+    if (status === GameStatus.Won || status === GameStatus.Lost) {
+      gameBtn.textContent = "Play Again";
+      return;
+    }
+
     const fps = 2;
     setTimeout(() => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawWorld();
-      drawSnake();
-      drawReward();
       world.step();
+      paint();
 
       // requestAnimationFrame is a browser API that calls the callback function before the next repaint
       requestAnimationFrame(play); // update()

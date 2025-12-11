@@ -6,13 +6,14 @@ A classic Snake game implemented using Rust and WebAssembly. The game runs as a 
 
 - **Snake Movement**: Control the snake using arrow keys (Up, Down, Left, Right)
 - **Wrapping Boundaries**: The snake wraps around the edges of the game board
-- **Visual Feedback**: Head and body segments are color-coded (green head, light green body)
-- **Reward System**: Collect orange reward cells to grow the snake
-- **Game Status**: Track your progress with status indicators (Playing/Won/Lost)
-- **Start Button**: Click "Play" to begin the game
-- **Win Condition**: Fill the entire board to win the game
+- **Visual Feedback**: Head and body segments are color-coded (dark purple head, light purple body)
+- **Reward System**: Collect orange reward cells to grow the snake and earn points
+- **Points Tracking**: Score increases by 1 point for each reward collected
+- **Game Status**: Track your progress with status indicators (No status/Playing.../Won/Lost)
+- **Start Button**: Click "Play" to begin the game (changes to "Playing..." during gameplay, then "Play Again" when game ends)
+- **Win Condition**: Fill the entire board (64 cells) to win the game
 - **Smooth Animation**: 2 FPS game loop with canvas-based rendering
-- **Random Spawn**: Snake spawns at a random position on the game board (default 5×5 grid)
+- **Random Spawn**: Snake spawns at a random position on the game board (8×8 grid)
 
 ## Tech Stack
 
@@ -87,9 +88,10 @@ The server will start on `http://localhost:3000`. Open this URL in your browser 
    - `Arrow Down`: Move snake down
    - `Arrow Left`: Move snake left
    - `Arrow Right`: Move snake right
-3. Collect orange reward cells to grow your snake
-4. Fill the entire board (25 cells) to win the game
+3. Collect orange reward cells to grow your snake and earn points
+4. Fill the entire board (64 cells) to win the game
 5. Avoid colliding with yourself (game over condition)
+6. Watch your points increase in the top-left corner as you collect rewards
 
 ### Production Build
 
@@ -108,12 +110,12 @@ snake_game/
 │   └── lib.rs          # Rust game logic (World, Snake, Direction)
 ├── www/
 │   ├── index.ts        # TypeScript entry point and game loop
-│   ├── index.html      # HTML file with canvas and game UI
+│   ├── index.html      # HTML file with canvas and game UI (Status and Points display)
 │   ├── bootstrap.js    # WebAssembly initialization
 │   ├── webpack.config.js # Webpack configuration
 │   ├── tsconfig.json   # TypeScript configuration
 │   ├── package.json    # Node.js dependencies
-│   ├── utils/          # Utility functions (e.g., rnd.ts)
+│   ├── utils/          # Utility functions (e.g., rnd.ts for random number generation)
 │   └── public/         # Build output directory (production)
 ├── pkg/                # wasm-pack build artifacts (generated)
 │   ├── snake_game_bg.wasm
@@ -126,12 +128,13 @@ snake_game/
 
 ## Game Mechanics
 
-- **Board Size**: Default 5×5 grid (25 cells total)
+- **Board Size**: 8×8 grid (64 cells total)
 - **Snake Initial Size**: 3 segments
 - **Movement Speed**: 2 FPS (2 moves per second)
 - **Reward Spawning**: Orange reward cells spawn randomly, avoiding snake body
 - **Growth**: Snake grows by one segment each time it eats a reward
-- **Win Condition**: Fill the entire board (reach 25 segments)
+- **Points System**: Earn 1 point for each reward collected (displayed in top-left)
+- **Win Condition**: Fill the entire board (reach 64 segments)
 - **Collision Detection**: Game ends if snake collides with itself
 - **Boundary Wrapping**: Snake wraps around edges instead of hitting walls
 
@@ -140,10 +143,11 @@ snake_game/
 ### Rust Side (`src/lib.rs`)
 
 - **`World`**: Main game state structure containing:
-  - Game board dimensions (default 5×5 grid)
+  - Game board dimensions (8×8 grid)
   - Snake instance with initial size of 3 segments
   - Reward cell position (orange food)
-  - Game status tracking (Won/Lost/Played)
+  - Game status tracking (Won/Lost/Played/None)
+  - Points counter (increments when snake eats reward)
   - Next cell calculation for direction changes
 - **`Snake`**: Snake structure with body segments and current direction
 - **`Direction`**: Enum for snake movement (Up, Down, Left, Right)
@@ -154,10 +158,13 @@ snake_game/
 
 - Initializes WebAssembly module
 - Sets up canvas rendering context (20px cell size)
+- Configures 8×8 game world (64 cells total)
 - Handles keyboard input events for snake control
 - Implements game loop with 2 FPS
-- Renders game grid, snake, and reward cells using Canvas API
-- Manages game status display and start button functionality
+- Renders game grid, snake (dark purple head, light purple body), and orange reward cells using Canvas API
+- Manages game status display ("No status"/"Playing..."/"Won"/"Lost")
+- Updates points display when rewards are collected
+- Handles Play button state changes ("Play" → "Playing..." → "Play Again")
 
 ## Development
 
