@@ -1,8 +1,9 @@
 [build]
   # ビルドコマンド: 
-  # 1. RustコードをビルドしてWASMファイルを生成 (wasm-pack build --target web)
-  # 2. wwwディレクトリでWebpackを実行してビルド
-  command = "wasm-pack build --target web && cd www && npm install && npm run build"
+  # 1. wasm-packをインストール
+  # 2. RustコードをビルドしてWASMファイルを生成 (wasm-pack build --target web)
+  # 3. wwwディレクトリでWebpackを実行してビルド
+  command = "curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh && wasm-pack build --target web && cd www && npm install && npm run build"
   
   # 公開ディレクトリ: ビルドされた静的ファイルが含まれるディレクトリ
   publish = "www/public"
