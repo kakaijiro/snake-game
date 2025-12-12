@@ -7,7 +7,7 @@ module.exports = {
     path: path.resolve(__dirname, "public"),
     filename: "bootstrap.js",
   },
-  mode: "development",
+  mode: process.env.NODE_ENV === "production" ? "production" : "development",
   module: {
     rules: [
       {
@@ -26,6 +26,10 @@ module.exports = {
         {
           from: path.resolve(__dirname, "index.html"),
           to: path.resolve(__dirname, "public/index.html"),
+        },
+        {
+          from: path.resolve(__dirname, "../pkg"),
+          to: path.resolve(__dirname, "public/pkg"),
         },
       ],
     }),

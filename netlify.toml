@@ -1,5 +1,5 @@
 [build]
-  command = "rustup default stable && curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh && wasm-pack build --target web && cd www && npm install && npm run build"
+  command = "./build-wasm.sh"
   publish = "www/public"
 
 [build.environment]
