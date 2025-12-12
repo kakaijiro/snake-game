@@ -1,0 +1,28 @@
+{
+  "name": "snake_game_server",
+  "version": "1.0.0",
+  "description": "A classic Snake game implemented using Rust and WebAssembly. The game runs as a web application in the browser, showcasing the performance benefits of WebAssembly for game logic.",
+  "main": "server/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server/index.js",
+    "build": "npm run build --prefix www",
+    "heroku-prebuild": "npm install --prefix www"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kakaijiro/snake-game.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/kakaijiro/snake-game/issues"
+  },
+  "homepage": "https://github.com/kakaijiro/snake-game#readme",
+  "dependencies": {
+    "compression": "^1.8.1",
+    "express": "^5.2.1"
+  }
+}

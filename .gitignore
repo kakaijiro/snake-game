@@ -3,3 +3,4 @@
 /src/lib-v*.rs
 notes.txt
 experiment.md
+/node_modules
