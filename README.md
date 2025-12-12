@@ -23,6 +23,7 @@ A classic Snake game implemented using Rust and WebAssembly. The game runs as a 
 - **wee_alloc** (v0.4.5): Small memory allocator optimized for WebAssembly
 - **TypeScript**: Frontend implementation
 - **Webpack**: Build tool and development server
+- **Express**: Production server with compression
 - **Canvas API**: 2D rendering
 
 ## Prerequisites
@@ -30,7 +31,7 @@ A classic Snake game implemented using Rust and WebAssembly. The game runs as a 
 - [Rust](https://www.rust-lang.org/tools/install) (latest stable version)
 - [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/)
 - [Node.js](https://nodejs.org/) (v16 or higher recommended)
-- [pnpm](https://pnpm.io/) (recommended) or npm
+- [pnpm](https://pnpm.io/) (package manager)
 
 ### Installation
 
@@ -41,6 +42,8 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 # Install wasm-pack
 curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
+# Install pnpm (if not already installed)
+npm install -g pnpm
 ```
 
 ## Setup
@@ -48,7 +51,7 @@ curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 1. Clone the repository:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/kakaijiro/snake-game.git
 cd snake_game
 ```
 
@@ -67,6 +70,13 @@ cd www
 pnpm install
 ```
 
+4. Install server dependencies (for production):
+
+```bash
+cd ..
+pnpm install
+```
+
 ## Build and Run
 
 ### Development Mode
@@ -78,7 +88,7 @@ cd www
 pnpm dev
 ```
 
-The server will start on `http://localhost:3000`. Open this URL in your browser to play the game.
+The server will start on `http://localhost:3000` and automatically open in your browser. The webpack dev server provides hot module replacement for instant updates.
 
 **How to Play:**
 
@@ -95,12 +105,23 @@ The server will start on `http://localhost:3000`. Open this URL in your browser 
 
 ### Production Build
 
+Build the frontend:
+
 ```bash
 cd www
 pnpm build
 ```
 
 Build artifacts will be output to the `www/public/` directory.
+
+Start the production server:
+
+```bash
+# From the root directory
+pnpm start
+```
+
+The Express server will start on port 3000 (or the port specified in the `PORT` environment variable) with compression enabled.
 
 ## Project Structure
 
@@ -110,19 +131,23 @@ snake_game/
 │   └── lib.rs          # Rust game logic (World, Snake, Direction)
 ├── www/
 │   ├── index.ts        # TypeScript entry point and game loop
-│   ├── index.html      # HTML file with canvas and game UI (Status and Points display)
-│   ├── bootstrap.js    # WebAssembly initialization
+│   ├── index.html      # HTML file with canvas and game UI
+│   ├── bootstrap.js     # Webpack entry point (imports index.ts)
 │   ├── webpack.config.js # Webpack configuration
 │   ├── tsconfig.json   # TypeScript configuration
-│   ├── package.json    # Node.js dependencies
-│   ├── utils/          # Utility functions (e.g., rnd.ts for random number generation)
+│   ├── package.json    # Frontend dependencies
+│   ├── utils/          # Utility functions (rnd.ts for random number generation)
 │   └── public/         # Build output directory (production)
+├── server/
+│   └── index.js        # Express server for production deployment
 ├── pkg/                # wasm-pack build artifacts (generated)
 │   ├── snake_game_bg.wasm
 │   ├── snake_game.js
-│   └── snake_game.d.ts
+│   ├── snake_game.d.ts
+│   └── package.json
 ├── Cargo.toml          # Rust project configuration
 ├── Cargo.lock          # Rust dependency lock file
+├── package.json        # Root package.json (server dependencies)
 └── README.md
 ```
 
@@ -137,6 +162,7 @@ snake_game/
 - **Win Condition**: Fill the entire board (reach 64 segments)
 - **Collision Detection**: Game ends if snake collides with itself
 - **Boundary Wrapping**: Snake wraps around edges instead of hitting walls
+- **Direction Prevention**: Cannot move in the opposite direction of current movement
 
 ## Game Architecture
 
@@ -152,19 +178,27 @@ snake_game/
 - **`Snake`**: Snake structure with body segments and current direction
 - **`Direction`**: Enum for snake movement (Up, Down, Left, Right)
 - **`GameStatus`**: Enum for game state (Won, Lost, Played)
-- **`SnakeCell`**: Represents a cell index in the game grid
+- **`SnakeCell`**: Represents a cell index in the game grid (wraps usize)
+- **Memory Management**: Uses `wee_alloc` for efficient WebAssembly memory allocation
+- **External Functions**: Calls TypeScript `rnd()` function for random number generation
 
 ### TypeScript Side (`www/index.ts`)
 
-- Initializes WebAssembly module
+- Initializes WebAssembly module via `init()` function
 - Sets up canvas rendering context (20px cell size)
 - Configures 8×8 game world (64 cells total)
-- Handles keyboard input events for snake control
-- Implements game loop with 2 FPS
-- Renders game grid, snake (dark purple head, light purple body), and orange reward cells using Canvas API
+- Handles keyboard input events for snake control (Arrow keys)
+- Implements game loop with 2 FPS using `setTimeout` and `requestAnimationFrame`
+- Renders game grid, snake (dark purple head `#5f3dc4`, light purple body `#b197fc`), and orange reward cells (`#fd7e14`) using Canvas API
 - Manages game status display ("No status"/"Playing..."/"Won"/"Lost")
 - Updates points display when rewards are collected
 - Handles Play button state changes ("Play" → "Playing..." → "Play Again")
+- Accesses WebAssembly memory directly via `wasm.memory.buffer` to read snake cells efficiently
+
+### Utility Functions (`www/utils/rnd.ts`)
+
+- Provides random number generation function used by Rust code
+- Called via `wasm-bindgen` extern function binding
 
 ## Development
 
@@ -176,11 +210,15 @@ When you modify Rust code, you need to rebuild WebAssembly:
 wasm-pack build --target web
 ```
 
-The development server will automatically reload when you refresh the browser.
+The development server will automatically reload when you refresh the browser. Note that WebAssembly modules are not hot-reloaded, so you'll need to manually refresh after rebuilding.
 
 ### Modifying TypeScript Code
 
-Changes to TypeScript files will be automatically picked up by webpack-dev-server with hot module replacement.
+Changes to TypeScript files will be automatically picked up by webpack-dev-server with hot module replacement (HMR). The browser will update without a full page reload.
+
+### Modifying HTML/CSS
+
+Changes to `index.html` and inline styles will be picked up by webpack-dev-server. For CSS changes, you may need to refresh the page.
 
 ## Optimization
 
@@ -204,9 +242,59 @@ These optimizations significantly reduce the final WebAssembly binary size while
 ## Performance Considerations
 
 - **Memory Allocation**: Uses `wee_alloc` for efficient memory allocation in WebAssembly
-- **Direct Memory Access**: Snake cells are accessed via raw pointers to avoid unnecessary copying
-- **Canvas Rendering**: Efficient 2D canvas rendering with minimal redraws
+- **Direct Memory Access**: Snake cells are accessed via raw pointers (`*const SnakeCell`) to avoid unnecessary copying between Rust and JavaScript
+- **Canvas Rendering**: Efficient 2D canvas rendering with minimal redraws (only clears and redraws on game step)
+- **Memory Buffer Caching**: TypeScript code caches `Uint32Array` views of WebAssembly memory for efficient access
+- **Game Loop**: Uses `setTimeout` with `requestAnimationFrame` for smooth 2 FPS animation
+
+## Deployment
+
+### Heroku Deployment
+
+The project includes configuration for Heroku deployment:
+
+1. Build the frontend:
+
+   ```bash
+   pnpm build
+   ```
+
+2. The `heroku-prebuild` script automatically installs frontend dependencies
+3. The `start` script runs the Express server
+4. Set the `PORT` environment variable (Heroku sets this automatically)
+
+### Environment Variables
+
+- `PORT`: Server port (defaults to 3000)
+
+## Troubleshooting
+
+### WebAssembly Module Not Loading
+
+- Ensure `wasm-pack build --target web` has been run successfully
+- Check browser console for import errors
+- Verify `pkg/` directory contains all required files
+
+### Build Errors
+
+- Make sure Rust toolchain is up to date: `rustup update`
+- Ensure `wasm-pack` is installed and up to date
+- Check that all dependencies are installed: `pnpm install` in both root and `www/` directories
+
+### Development Server Issues
+
+- Clear browser cache if changes aren't appearing
+- Restart the dev server if WebAssembly changes aren't reflected
+- Check that port 3000 is not already in use
 
 ## License
 
 This project is licensed under the MIT License.
+
+## Live Demo
+
+- You can see the live demo [here](https://snaking-game-86ea257b2384.herokuapp.com/).
+
+## Repository
+
+- **GitHub**: [https://github.com/kakaijiro/snake-game](https://github.com/kakaijiro/snake-game)
