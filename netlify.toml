@@ -1,0 +1,32 @@
+[build]
+  # ビルドコマンド: 
+  # 1. RustコードをビルドしてWASMファイルを生成 (wasm-pack build --target web)
+  # 2. wwwディレクトリでWebpackを実行してビルド
+  command = "wasm-pack build --target web && cd www && npm install && npm run build"
+  
+  # 公開ディレクトリ: ビルドされた静的ファイルが含まれるディレクトリ
+  publish = "www/public"
+
+# ビルド環境の設定
+[build.environment]
+  # Rustのバージョン（Netlifyが自動的に検出しますが、明示的に指定することも可能）
+  # RUST_VERSION = "stable"
+
+# WASMファイルのMIMEタイプを設定（Netlifyは自動的に設定しますが、明示的に指定することも可能）
+[[headers]]
+  for = "/*.wasm"
+  [headers.values]
+    Content-Type = "application/wasm"
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# JavaScriptファイルのキャッシュ設定
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# HTMLファイルのキャッシュ設定（短めに設定）
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
