@@ -1,42 +1,32 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# Fail early on any command failure
 
-# Ensure cargo bin is on PATH so cargo-installed binaries (wasm-bindgen / wasm-pack) are usable
-export PATH="$HOME/.cargo/bin:$PATH"
-
-# Use stable toolchain and ensure wasm target is present (skip if already set)
-rustup default stable || true
-rustup target add wasm32-unknown-unknown || true
-
-# Install wasm-pack if not already installed
-if ! command -v wasm-pack &> /dev/null; then
-    echo "Installing wasm-pack..."
-    curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-    export PATH="$HOME/.cargo/bin:$PATH"
-fi
-
-# Verify wasm-pack is available
-if ! command -v wasm-pack &> /dev/null; then
-    echo "Error: wasm-pack is not available"
-    exit 1
-fi
-
-echo "Building WASM package..."
-# Build the wasm package
-wasm-pack build --release --target web
-
-# Build the frontend
-echo "Building frontend..."
-cd www
-
-# Use pnpm if available, otherwise fall back to npm
-if command -v pnpm &> /dev/null; then
-    echo "Using pnpm..."
-    pnpm install
-    NODE_ENV=production pnpm run build
+# If wasm-pack exists, use it
+if command -v wasm-pack >/dev/null 2>&1; then
+  echo "wasm-pack already installed: $(wasm-pack --version)"
 else
-    echo "Using npm..."
-    npm install
-    NODE_ENV=production npm run build
+  echo "Installing wasm-pack via cargo..."
+  # Use cargo install (requires Rust/cargo, which your log shows is installed)
+  if cargo install wasm-pack --locked; then
+    echo "wasm-pack installed via cargo."
+  else
+    echo "cargo install failed — falling back to downloading prebuilt binary..."
+    # Example download fallback (adjust version/platform if needed)
+    WASM_PACK_VER="v0.13.1"
+    TMPDIR="$(mktemp -d)"
+    ARCHIVE="wasm-pack-${WASM_PACK_VER}-x86_64-unknown-linux-musl.tar.gz"
+    URL="https://github.com/rustwasm/wasm-pack/releases/download/${WASM_PACK_VER}/${ARCHIVE}"
+    curl -sSL "$URL" -o "${TMPDIR}/${ARCHIVE}"
+    tar -xzf "${TMPDIR}/${ARCHIVE}" -C "${TMPDIR}"
+    mkdir -p "${HOME}/.cargo/bin"
+    mv "${TMPDIR}/wasm-pack" "${HOME}/.cargo/bin/wasm-pack"
+    chmod +x "${HOME}/.cargo/bin/wasm-pack"
+    echo "wasm-pack installed to ${HOME}/.cargo/bin"
+    rm -rf "${TMPDIR}"
+  fi
 fi
 
+# Continue with your existing wasm build steps, e.g.:
+# wasm-pack build --target web --out-dir ../www/public/pkg
+# (keep whatever commands you had following the install)
