@@ -1,32 +1,45 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# Fail early on any command failure
 
-# If wasm-pack exists, use it
-if command -v wasm-pack >/dev/null 2>&1; then
-  echo "wasm-pack already installed: $(wasm-pack --version)"
-else
+# Ensure rustup / cargo exist and a default toolchain is set
+if ! command -v cargo >/dev/null 2>&1; then
+  echo "Installing rustup (non-interactive)..."
+  curl https://sh.rustup.rs -sSf | sh -s -- -y
+  # load cargo env in the current shell
+  export PATH="$HOME/.cargo/bin:$PATH"
+fi
+
+# Ensure a default toolchain is installed
+if ! rustup show > /dev/null 2>&1; then
+  echo "Setting rustup default toolchain to stable..."
+  rustup default stable
+fi
+
+# Install wasm-pack (try cargo install, fallback to prebuilt binary)
+if ! command -v wasm-pack >/dev/null 2>&1; then
   echo "Installing wasm-pack via cargo..."
-  # Use cargo install (requires Rust/cargo, which your log shows is installed)
-  if cargo install wasm-pack --locked; then
-    echo "wasm-pack installed via cargo."
-  else
-    echo "cargo install failed — falling back to downloading prebuilt binary..."
-    # Example download fallback (adjust version/platform if needed)
-    WASM_PACK_VER="v0.13.1"
+  if ! cargo install wasm-pack --locked; then
+    echo "cargo install failed, trying prebuilt wasm-pack binary..."
+    # Pick a known release version; update if you want a different one
+    WPM_VER="v0.10.4"
     TMPDIR="$(mktemp -d)"
-    ARCHIVE="wasm-pack-${WASM_PACK_VER}-x86_64-unknown-linux-musl.tar.gz"
-    URL="https://github.com/rustwasm/wasm-pack/releases/download/${WASM_PACK_VER}/${ARCHIVE}"
-    curl -sSL "$URL" -o "${TMPDIR}/${ARCHIVE}"
-    tar -xzf "${TMPDIR}/${ARCHIVE}" -C "${TMPDIR}"
-    mkdir -p "${HOME}/.cargo/bin"
-    mv "${TMPDIR}/wasm-pack" "${HOME}/.cargo/bin/wasm-pack"
-    chmod +x "${HOME}/.cargo/bin/wasm-pack"
-    echo "wasm-pack installed to ${HOME}/.cargo/bin"
-    rm -rf "${TMPDIR}"
+    wget -qO "$TMPDIR/wasm-pack.tar.gz" "https://github.com/rustwasm/wasm-pack/releases/download/$WPM_VER/wasm-pack-$WPM_VER-x86_64-unknown-linux-musl.tar.gz" || \
+      wget -qO "$TMPDIR/wasm-pack.tar.gz" "https://github.com/rustwasm/wasm-pack/releases/download/$WPM_VER/wasm-pack-$WPM_VER-x86_64-unknown-linux-gnu.tar.gz"
+    mkdir -p "$TMPDIR/wasm-pack"
+    tar -xzf "$TMPDIR/wasm-pack.tar.gz" -C "$TMPDIR/wasm-pack"
+    # locate binary and move it to ~/.cargo/bin
+    mkdir -p "$HOME/.cargo/bin"
+    if [ -f "$TMPDIR/wasm-pack/wasm-pack" ]; then
+      cp "$TMPDIR/wasm-pack/wasm-pack" "$HOME/.cargo/bin/wasm-pack"
+      chmod +x "$HOME/.cargo/bin/wasm-pack"
+      export PATH="$HOME/.cargo/bin:$PATH"
+    else
+      echo "Failed to install wasm-pack: prebuilt binary not found in archive"
+      exit 1
+    fi
+    rm -rf "$TMPDIR"
   fi
 fi
 
-# Continue with your existing wasm build steps, e.g.:
-# wasm-pack build --target web --out-dir ../www/public/pkg
-# (keep whatever commands you had following the install)
+# Now continue with the original build steps (e.g. wasm build, bundling, etc.)
+# ... rest of your build-wasm.sh
