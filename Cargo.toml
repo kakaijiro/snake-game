@@ -29,5 +29,7 @@ strip = true         # Strip debug symbols
 # --enable-bulk-memory: Required for wasm-bindgen generated code (uses memory.copy, etc.)
 # -Os: Size optimization (balanced, wasm-pack default)
 # -O:  Speed optimization (default wasm-opt behavior)
+# Disable wasm-opt for Netlify builds to avoid configuration errors and speed up build time
+# The Rust compiler optimizations (opt-level = "z", lto = true) are sufficient for size optimization
 [package.metadata.wasm-pack.profile.release]
-wasm-opt = ["-Oz", "--enable-bulk-memory"]  # Maximum size optimization with bulk memory support   
+wasm-opt = false  # Disable wasm-opt to avoid build errors and speed up CI builds   
