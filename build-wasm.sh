@@ -41,5 +41,34 @@ if ! command -v wasm-pack >/dev/null 2>&1; then
   fi
 fi
 
-# Now continue with the original build steps (e.g. wasm build, bundling, etc.)
-# ... rest of your build-wasm.sh
+# Ensure cargo bin is on PATH
+export PATH="$HOME/.cargo/bin:$PATH"
+
+# Verify wasm-pack is available
+if ! command -v wasm-pack >/dev/null 2>&1; then
+  echo "Error: wasm-pack is not available after installation attempts"
+  exit 1
+fi
+
+# Use stable toolchain and ensure wasm target is present
+rustup default stable || true
+rustup target add wasm32-unknown-unknown || true
+
+# Build the WASM package
+echo "Building WASM package..."
+wasm-pack build --release --target web
+
+# Build the frontend
+echo "Building frontend..."
+cd www
+
+# Use pnpm if available, otherwise fall back to npm
+if command -v pnpm >/dev/null 2>&1; then
+  echo "Using pnpm..."
+  pnpm install
+  NODE_ENV=production pnpm run build
+else
+  echo "Using npm..."
+  npm install
+  NODE_ENV=production npm run build
+fi
