@@ -3,6 +3,8 @@
   publish = "www/public"
 
 [build.environment]
+  # Use pnpm as package manager
+  NPM_FLAGS = "--package-manager=pnpm"
 
 [[headers]]
   for = "/*.wasm"
