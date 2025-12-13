@@ -1,5 +1,5 @@
 [build]
-  command = "./build-wasm.sh"
+  command = "npm run build --prefix www"
   publish = "www/public"
 
 [build.environment]
