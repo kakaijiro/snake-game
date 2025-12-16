@@ -6,8 +6,10 @@ module.exports = {
   output: {
     path: path.resolve(__dirname, "public"),
     filename: "bootstrap.js",
+    publicPath: "/", // Important: Set publicPath for WASM file resolution
   },
   mode: process.env.NODE_ENV === "production" ? "production" : "development",
+  devtool: process.env.NODE_ENV === "production" ? false : "eval-source-map", // Avoid eval() in production
   module: {
     rules: [
       {
