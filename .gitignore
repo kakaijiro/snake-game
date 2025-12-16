@@ -6,3 +6,5 @@ experiment.md
 /node_modules
 NETLIFY_DEPLOY.md
 
+*.md
+!README.md

@@ -1,5 +1,6 @@
 [build]
-  command = "./build-wasm.sh"
+  # No build command needed - www/public/ is already committed to Git
+  # command = "./build-wasm.sh"
   publish = "www/public"
 
 [build.environment]
