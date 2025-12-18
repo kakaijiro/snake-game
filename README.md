@@ -31,7 +31,7 @@ A classic Snake game implemented using Rust and WebAssembly. The game runs as a 
 - [Rust](https://www.rust-lang.org/tools/install) (latest stable version)
 - [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/)
 - [Node.js](https://nodejs.org/) (v16 or higher recommended)
-- [pnpm](https://pnpm.io/) (package manager)
+- [pnpm](https://pnpm.io/) (package manager - **required**, this project uses pnpm exclusively)
 
 ### Installation
 
@@ -62,6 +62,19 @@ wasm-pack build --target web
 ```
 
 This will create the `pkg/` directory containing the compiled WebAssembly module and TypeScript bindings.
+
+Alternatively, you can use the build script which handles the entire build process:
+
+```bash
+./build-wasm.sh
+```
+
+This script will:
+
+- Install Rust and wasm-pack if needed
+- Build the WebAssembly package
+- Install frontend dependencies (using pnpm if available, otherwise npm)
+- Build the frontend
 
 3. Install frontend dependencies:
 
@@ -139,7 +152,7 @@ snake_game/
 │   ├── utils/          # Utility functions (rnd.ts for random number generation)
 │   └── public/         # Build output directory (production)
 ├── server/
-│   └── index.js        # Express server for production deployment
+│   └── index.js        # Express server for production deployment (Heroku)
 ├── pkg/                # wasm-pack build artifacts (generated)
 │   ├── snake_game_bg.wasm
 │   ├── snake_game.js
@@ -148,6 +161,9 @@ snake_game/
 ├── Cargo.toml          # Rust project configuration
 ├── Cargo.lock          # Rust dependency lock file
 ├── package.json        # Root package.json (server dependencies)
+├── netlify.toml        # Netlify deployment configuration
+├── build-wasm.sh       # Build script for WASM and frontend
+├── NETLIFY_DEPLOY.md   # Netlify deployment guide
 └── README.md
 ```
 
@@ -234,8 +250,10 @@ The following optimizations are applied in release builds:
 
 ### WebAssembly Optimizations
 
-- **wasm-opt**: `-Oz` flag for maximum size optimization
-- **Bulk memory**: `--enable-bulk-memory` for efficient memory operations
+- **wasm-opt**: Disabled in `Cargo.toml` for faster CI builds (Rust compiler optimizations are sufficient)
+- **Bulk memory**: Enabled automatically by wasm-bindgen for efficient memory operations
+
+**Note**: `wasm-opt` is disabled in the current configuration to avoid build errors and speed up CI builds. The Rust compiler optimizations (`opt-level = "z"`, `lto = true`) provide sufficient size optimization. If you want to enable `wasm-opt` for additional size reduction, you can install it via `cargo install wasm-opt` and uncomment the wasm-opt configuration in `Cargo.toml`.
 
 These optimizations significantly reduce the final WebAssembly binary size while maintaining performance.
 
@@ -249,23 +267,62 @@ These optimizations significantly reduce the final WebAssembly binary size while
 
 ## Deployment
 
+### Netlify Deployment (Recommended)
+
+The project is configured for Netlify static site hosting:
+
+1. **Automatic Deployment via Git**:
+
+   - Connect your GitHub repository to Netlify
+   - Netlify will automatically detect the `netlify.toml` configuration
+   - The build process will:
+     - Build WebAssembly: `wasm-pack build --target web`
+     - Install dependencies: `pnpm install` (in `www/` directory)
+     - Build frontend: `pnpm run build`
+   - Publish directory: `www/public`
+
+2. **Manual Deployment**:
+
+   ```bash
+   # Build WebAssembly
+   wasm-pack build --target web
+
+   # Build frontend
+   cd www
+   pnpm install
+   pnpm run build
+   ```
+
+   Then deploy the `www/public` directory to Netlify.
+
+3. **Configuration**:
+   - `netlify.toml` includes:
+     - WASM file MIME type headers (`application/wasm`)
+     - Cache headers for static assets
+     - pnpm package manager configuration
+
+See `NETLIFY_DEPLOY.md` for detailed deployment instructions.
+
 ### Heroku Deployment
 
-The project includes configuration for Heroku deployment:
+The project also includes configuration for Heroku deployment:
 
 1. Build the frontend:
 
    ```bash
-   pnpm build
+   cd www
+   pnpm run build
    ```
 
-2. The `heroku-prebuild` script automatically installs frontend dependencies
+2. **Note**: The root `package.json` scripts use `npm` for Heroku compatibility, but you should use `pnpm` directly when building locally:
+   - Use `pnpm install` and `pnpm run build` in the `www/` directory
+   - The `heroku-prebuild` script will handle dependency installation on Heroku
 3. The `start` script runs the Express server
 4. Set the `PORT` environment variable (Heroku sets this automatically)
 
 ### Environment Variables
 
-- `PORT`: Server port (defaults to 3000)
+- `PORT`: Server port (defaults to 3000, used for Heroku/Express server)
 
 ## Troubleshooting
 
@@ -280,6 +337,7 @@ The project includes configuration for Heroku deployment:
 - Make sure Rust toolchain is up to date: `rustup update`
 - Ensure `wasm-pack` is installed and up to date
 - Check that all dependencies are installed: `pnpm install` in both root and `www/` directories
+- If using the build script (`./build-wasm.sh`), ensure it has execute permissions: `chmod +x build-wasm.sh`
 
 ### Development Server Issues
 
@@ -293,7 +351,8 @@ This project is licensed under the MIT License.
 
 ## Live Demo
 
-- You can see the live demo [here](https://snaking-game-86ea257b2384.herokuapp.com/).
+- **Netlify**: [Check the Netlify deployment](https://your-netlify-app.netlify.app) (if deployed)
+- **Heroku**: [Heroku deployment](https://snaking-game-86ea257b2384.herokuapp.com/)
 
 ## Repository
 
