@@ -351,7 +351,7 @@ This project is licensed under the MIT License.
 
 ## Live Demo
 
-- **Netlify**: [Check the Netlify deployment](https://your-netlify-app.netlify.app) (if deployed)
+- **Netlify**: [Netlify deployment](https://ephemeral-kelpie-766c0a.netlify.app/)
 - **Heroku**: [Heroku deployment](https://snaking-game-86ea257b2384.herokuapp.com/)
 
 ## Repository
